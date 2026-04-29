@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>RAG CHATBOT</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+* {
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  height:100vh;
+  overflow:hidden;
+  background: radial-gradient(circle at top, #1e1b4b, #020617);
+  color:white;
+}
+
+/* 🌌 Canvas */
+canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:0;
+}
+
+/* Layout */
+.app {
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
+
+/* 🌟 HEADER */
+header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px 25px;
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.05);
+}
+
+/* 🔥 LOGO */
+.logo {
+  font-family:'Orbitron', sans-serif;
+  font-size:36px;
+  letter-spacing:3px;
+  font-weight:700;
+
+  background: linear-gradient(135deg,#a78bfa,#ec4899,#22d3ee);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+
+  text-shadow:
+    0 0 10px rgba(168,139,250,0.8),
+    0 0 25px rgba(236,72,153,0.7),
+    0 0 40px rgba(34,211,238,0.6);
+
+  animation: glow 3s infinite alternate;
+}
+
+@keyframes glow {
+  from { text-shadow:0 0 10px #a78bfa;}
+  to { text-shadow:0 0 35px #ec4899;}
+}
+
+/* Container */
+.container {
+  flex:1;
+  display:flex;
+  gap:15px;
+  padding:15px;
+}
+
+/* Glass */
+.glass {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(25px);
+  border-radius:18px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.6);
+  transition:0.2s;
+}
+
+/* Sidebar */
+.sidebar {
+  width:300px;
+  padding:20px;
+}
+
+/* Upload */
+.upload {
+  border:2px dashed rgba(255,255,255,0.3);
+  padding:30px;
+  text-align:center;
+  border-radius:14px;
+  cursor:pointer;
+}
+
+.upload:hover {
+  border-color:#a78bfa;
+}
+
+/* Files */
+.file {
+  font-size:13px;
+  margin-top:8px;
+  opacity:0.8;
+}
+
+/* Preview */
+.preview {
+  margin-top:10px;
+  font-size:12px;
+  padding:10px;
+  background:rgba(0,0,0,0.3);
+  border-radius:10px;
+}
+
+/* Chat */
+.chat {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.chat-box {
+  flex:1;
+  padding:20px;
+  overflow-y:auto;
+}
+
+/* Messages */
+.msg {
+  padding:12px 16px;
+  border-radius:14px;
+  margin-bottom:10px;
+  max-width:70%;
+}
+
+.user {
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  margin-left:auto;
+}
+
+.bot {
+  background:rgba(255,255,255,0.1);
+}
+
+/* Input */
+.input-area {
+  display:flex;
+  padding:15px;
+  gap:10px;
+}
+
+input {
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.1);
+  color:white;
+}
+
+/* Button */
+button {
+  border:none;
+  padding:12px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#ec4899,#6366f1);
+  color:white;
+  cursor:pointer;
+}
+
+button:hover {
+  transform:scale(1.05);
+}
+
+/* Typing */
+.typing span {
+  display:inline-block;
+  width:6px;
+  height:6px;
+  background:white;
+  margin:2px;
+  border-radius:50%;
+  animation:bounce 1s infinite;
+}
+
+.typing span:nth-child(2){animation-delay:0.2s;}
+.typing span:nth-child(3){animation-delay:0.4s;}
+
+@keyframes bounce {
+  0%,80%,100%{transform:scale(0);}
+  40%{transform:scale(1);}
+}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none;}
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="app">
+
+<header>
+  <div class="logo">RAG CHATBOT</div>
+  <button onclick="clearChat()">Clear</button>
+</header>
+
+<div class="container">
+
+<!-- Sidebar -->
+<div class="sidebar glass" id="tilt1">
+  <div class="upload" onclick="fileInput.click()">
+    <i class="fa fa-upload"></i><br>Upload PDF/TXT
+    <input type="file" id="fileInput" hidden multiple>
+  </div>
+
+  <div id="files"></div>
+  <div class="preview" id="preview">No file uploaded</div>
+</div>
+
+<!-- Chat -->
+<div class="chat glass" id="tilt2">
+
+<div class="chat-box" id="chat"></div>
+
+<div class="input-area">
+  <input id="input" placeholder="Ask about your research..." disabled>
+  <button onclick="send()">➤</button>
+</div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+/* 🌌 PARTICLES */
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+let particles = Array.from({length:100},()=>({
+  x:Math.random()*canvas.width,
+  y:Math.random()*canvas.height,
+  r:Math.random()*2,
+  dx:Math.random()-0.5,
+  dy:Math.random()-0.5
+}));
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p=>{
+    p.x+=p.dx;
+    p.y+=p.dy;
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle="#8b5cf6";
+    ctx.fill();
+  });
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* 📄 FILE UPLOAD */
+fileInput.onchange=e=>{
+  let html="";
+  for(let f of e.target.files){
+    html+=`<div class="file">${f.name}</div>`;
+    preview.innerText="Preview: "+f.name;
+  }
+  files.innerHTML=html;
+  input.disabled=false;
+};
+
+/* 💬 CHAT */
+function send(){
+  let text=input.value;
+  if(!text) return;
+
+  add(text,"user");
+  input.value="";
+
+  let typing=document.createElement("div");
+  typing.className="msg bot typing";
+  typing.innerHTML="<span></span><span></span><span></span>";
+  chat.appendChild(typing);
+
+  setTimeout(()=>{
+    typing.remove();
+    add("📄 Answer based on your file: "+text,"bot");
+  },1200);
+}
+
+function add(t,type){
+  let d=document.createElement("div");
+  d.className="msg "+type;
+  d.innerText=t;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+/* Clear */
+function clearChat(){
+  chat.innerHTML="";
+}
+
+/* 🧊 3D TILT */
+function tilt(el){
+  el.onmousemove=e=>{
+    let r=el.getBoundingClientRect();
+    let x=(e.clientX-r.left)/r.width-0.5;
+    let y=(e.clientY-r.top)/r.height-0.5;
+    el.style.transform=`rotateX(${y*10}deg) rotateY(${x*10}deg)`;
+  };
+  el.onmouseleave=()=>el.style.transform="rotate(0)";
+}
+
+tilt(document.getElementById("tilt1"));
+tilt(document.getElementById("tilt2"));
+</script>
+
+</body>
+</html>
