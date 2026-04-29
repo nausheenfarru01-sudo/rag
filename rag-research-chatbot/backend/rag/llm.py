@@ -1,16 +1,18 @@
 import requests
 import os
+import time
 
-API_KEY = "AIzaSyDkaklfl4t6gogvUxT6Z7r5PDOs3LdvXVk"
+API_KEY = ""
 
 def generate_answer(query, context):
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={API_KEY}"
 
-    prompt = f"""
+    payload = {
+        "contents": [{
+            "parts": [{
+                "text": f"""
 You are a research assistant.
-
-Answer ONLY using the context below.
-If the answer is not in the context, say "Not enough information".
+Answer ONLY using the context.
 
 Context:
 {context}
@@ -18,23 +20,27 @@ Context:
 Question:
 {query}
 """
-
-    data = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
-        ]
+            }]
+        }]
     }
 
-    response = requests.post(url, json=data)
-    result = response.json()
+    for attempt in range(3):  # 🔁 retry 3 times
+        try:
+            response = requests.post(url, json=payload)
+            data = response.json()
 
-    print("Gemini response:", result)  # debug
+            print("Gemini response:", data)
 
-    try:
-        return result["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return f"Gemini Error: {result}"
+            # ❌ handle error
+            if "error" in data:
+                if data["error"]["code"] == 503:
+                    time.sleep(2)  # wait and retry
+                    continue
+                return f"Gemini Error: {data['error']['message']}"
+
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+
+        except Exception as e:
+            time.sleep(2)
+
+    return "⚠️ Server busy. Please try again."
