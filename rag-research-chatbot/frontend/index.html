@@ -22,7 +22,7 @@
 body {
   font-family: 'Inter', sans-serif;
   height:100vh;
-  overflow:hidden;
+  overflow:auto;
   background: radial-gradient(circle at top, #1e1b4b, #020617);
   color:white;
 }
@@ -287,33 +287,69 @@ function animate(){
 animate();
 
 /* 📄 FILE UPLOAD */
-fileInput.onchange=e=>{
-  let html="";
-  for(let f of e.target.files){
-    html+=`<div class="file">${f.name}</div>`;
-    preview.innerText="Preview: "+f.name;
+fileInput.onchange = async (e) => {
+  let html = "";
+
+  for (let f of e.target.files) {
+    html += `<div class="file">${f.name}</div>`;
+    preview.innerText = "Uploading: " + f.name;
+
+    const formData = new FormData();
+    formData.append("file", f);
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      preview.innerText = "✅ " + data.message;
+      input.disabled = false;
+
+    } catch (err) {
+      preview.innerText = "❌ Upload failed";
+      console.error(err);
+    }
   }
-  files.innerHTML=html;
-  input.disabled=false;
+
+  files.innerHTML = html;
 };
 
 /* 💬 CHAT */
-function send(){
-  let text=input.value;
+async function send(){
+  let text = input.value;
   if(!text) return;
 
-  add(text,"user");
-  input.value="";
+  add(text, "user");
+  input.value = "";
 
-  let typing=document.createElement("div");
-  typing.className="msg bot typing";
-  typing.innerHTML="<span></span><span></span><span></span>";
+  // typing animation
+  let typing = document.createElement("div");
+  typing.className = "msg bot typing";
+  typing.innerHTML = "<span></span><span></span><span></span>";
   chat.appendChild(typing);
 
-  setTimeout(()=>{
+  try {
+    const res = await fetch("http://127.0.0.1:8000/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ query: text })
+    });
+
+    const data = await res.json();
+
     typing.remove();
-    add("📄 Answer based on your file: "+text,"bot");
-  },1200);
+    add(data.answer, "bot");
+
+  } catch (err) {
+    typing.remove();
+    add("❌ Error connecting to server", "bot");
+    console.error(err);
+  }
 }
 
 function add(t,type){
@@ -342,6 +378,13 @@ function tilt(el){
 
 tilt(document.getElementById("tilt1"));
 tilt(document.getElementById("tilt2"));
+/* ⌨️ ENTER KEY SEND */
+document.getElementById("input").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send();
+  }
+});
 </script>
 
 </body>
