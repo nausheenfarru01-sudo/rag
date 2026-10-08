@@ -66,3 +66,19 @@ def test_missing_key(monkeypatch):
     monkeypatch.setattr(llm, "settings", dataclasses.replace(llm.settings, gemini_api_key=""))
     with pytest.raises(llm.LLMError, match="GEMINI_API_KEY"):
         llm.generate_answer("q", RESULTS)
+
+
+def test_history_is_included_in_prompt(monkeypatch):
+    sent = []
+    monkeypatch.setattr(llm.requests, "post", lambda url, **kw: sent.append(kw["json"]) or ok("ok"))
+    history = [{"role": "user", "content": "What is attention?"}, {"role": "assistant", "content": "A mechanism."}]
+    llm.generate_answer("Simpler please", RESULTS, history)
+    prompt = sent[0]["contents"][0]["parts"][0]["text"]
+    assert "Student: What is attention?" in prompt
+    assert "Assistant: A mechanism." in prompt
+
+
+def test_history_is_trimmed():
+    history = [{"role": "user", "content": f"q{i}"} for i in range(10)]
+    text = llm.build_history(history)
+    assert "q3" not in text and "q4" in text and "q9" in text

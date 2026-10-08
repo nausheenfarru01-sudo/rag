@@ -19,6 +19,7 @@ class VectorStore:
         self.dim = dim
         self._index = faiss.IndexFlatIP(dim)
         self._chunks: list[Chunk] = []
+        self._vectors = np.empty((0, dim), dtype="float32")
         self._lock = threading.Lock()
 
     def __len__(self) -> int:
@@ -29,8 +30,10 @@ class VectorStore:
             raise ValueError("embeddings and chunks must have the same length")
         if len(chunks) == 0:
             return
+        vectors = np.asarray(embeddings, dtype="float32")
         with self._lock:
-            self._index.add(np.asarray(embeddings, dtype="float32"))
+            self._index.add(vectors)
+            self._vectors = np.vstack([self._vectors, vectors])
             self._chunks.extend(chunks)
 
     def search(self, query_embedding: np.ndarray, top_k: int = 4) -> list[SearchResult]:
@@ -42,14 +45,28 @@ class VectorStore:
             return [SearchResult(self._chunks[i], float(s)) for s, i in zip(scores[0], ids[0]) if i != -1]
 
     def documents(self) -> dict[str, int]:
-        """Document name -> number of chunks."""
+        """Document name -> number of chunks, in upload order."""
         counts: dict[str, int] = {}
         with self._lock:
             for chunk in self._chunks:
                 counts[chunk.document] = counts.get(chunk.document, 0) + 1
         return counts
 
+    def remove(self, document: str) -> int:
+        """Drop every chunk of one document and rebuild the index. Returns how many were removed."""
+        with self._lock:
+            keep = [i for i, c in enumerate(self._chunks) if c.document != document]
+            removed = len(self._chunks) - len(keep)
+            if removed:
+                self._chunks = [self._chunks[i] for i in keep]
+                self._vectors = self._vectors[keep]
+                self._index.reset()
+                if len(keep):
+                    self._index.add(self._vectors)
+            return removed
+
     def clear(self) -> None:
         with self._lock:
             self._index.reset()
             self._chunks.clear()
+            self._vectors = np.empty((0, self.dim), dtype="float32")

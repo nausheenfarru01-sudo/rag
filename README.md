@@ -1,4 +1,4 @@
-# RAG Research Paper Chatbot
+# ResearchMind: RAG Research Paper Chatbot
 
 [![tests](https://github.com/nausheenfarru01-sudo/rag/actions/workflows/tests.yml/badge.svg)](https://github.com/nausheenfarru01-sudo/rag/actions/workflows/tests.yml)
 
@@ -7,11 +7,31 @@ Upload one or more PDFs, and the app retrieves the most relevant passages using 
 
 ## Features
 
+**Retrieval and answers**
 - **Semantic search:** chunks are embedded with Sentence-Transformers (`all-MiniLM-L6-v2`) and searched with a FAISS index (cosine similarity).
-- **Grounded answers with citations:** Gemini 2.5 Flash answers only from the retrieved passages and cites them as `[1]`, `[2]`. Each answer shows its sources with document name, page number and match score.
-- **Multiple documents:** upload several PDF, TXT or Markdown files and ask questions across all of them.
-- **Robust API:** input validation, upload size limits, clear error messages, and retries with exponential backoff when Gemini is busy.
-- **Tested:** 27 pytest tests covering chunking, vector search, the Gemini client and every API endpoint. They run offline in CI with fakes for the model and LLM.
+- **Grounded answers with citations:** Gemini 2.5 Flash answers only from the retrieved passages and cites them as `[1]`, `[2]`.
+- **Follow-up questions:** recent conversation turns are sent along, so "explain that more simply" works.
+- **A library of papers:** upload several PDF, TXT or Markdown files, see pages, chunks and size for each, and remove any one of them (the FAISS index is rebuilt).
+
+**Interface**
+- **Three-panel layout:**
+  - a sidebar with saved conversations (searchable) and the paper library
+  - the chat in the middle
+  - a Sources panel showing every passage used, with page number, match score and your question's keywords highlighted
+- **Clickable citations:** click `[2]` in an answer to jump to that passage.
+- **Rich answers:** headings, lists, bold and code render properly, with copy and regenerate buttons and response time.
+- **Live progress:** "Searching → Reading → Writing" steps while an answer is generated, and a Stop button to cancel.
+- **Getting started:** suggested questions (summarize, methodology, limitations, explain simply) and a big drop zone.
+- **Uploads:** drag papers anywhere onto the window.
+- **Status:** a live pill shows whether the backend is up and the Gemini key is configured.
+- **Settings:** light and dark themes, accent colours, and how many passages to retrieve per answer.
+- **Keyboard shortcuts:** `Ctrl+K` new chat, `/` focus, `Ctrl+U` upload, `Ctrl+.` sources panel, `Esc` stop, `?` help.
+- **Responsive:** on mobile the sidebar and sources panel become slide-out drawers.
+- **No build step:** plain HTML, CSS and JavaScript served by FastAPI.
+
+**Engineering**
+- **Robust API:** input validation, upload size limits, clear errors, and retries with exponential backoff when Gemini is busy.
+- **Tested:** 34 pytest tests covering chunking, the vector store (including document removal), the Gemini client (retries, history) and every API endpoint. They run offline in CI with fakes for the model and LLM.
 
 ## How it works
 
@@ -57,9 +77,10 @@ Interactive API docs are at http://127.0.0.1:8000/docs.
 | --- | --- | --- |
 | `GET` | `/api/health` | Server status and whether the Gemini key is configured |
 | `POST` | `/api/upload` | Upload a PDF/TXT/MD file (multipart field `file`) and index it |
-| `GET` | `/api/documents` | List indexed documents and their chunk counts |
+| `GET` | `/api/documents` | List documents with pages, chunks, words, size and upload time |
+| `DELETE` | `/api/documents/{name}` | Remove one document and rebuild the index |
 | `DELETE` | `/api/documents` | Remove all documents |
-| `POST` | `/api/chat` | `{"query": "...", "top_k": 4}` → `{"answer": "...", "sources": [...]}` |
+| `POST` | `/api/chat` | `{"query": "...", "top_k": 4, "history": [{"role": "user", "content": "..."}]}` → `{"answer", "sources", "elapsed_ms"}` |
 
 ## Configuration
 
@@ -96,11 +117,13 @@ rag-research-chatbot/
 │   │   ├── retriever.py     # top-k semantic retrieval
 │   │   └── llm.py           # Gemini client with retries
 │   └── tests/
-└── frontend/
-    └── index.html           # chat UI, served by FastAPI at /
+└── frontend/                # served by FastAPI at / and /static
+    ├── index.html           # layout: sidebar, chat, sources panel
+    ├── styles.css           # design tokens, light/dark themes, responsive layout
+    └── app.js               # conversations, Markdown, citations, uploads, shortcuts
 ```
 
 ## Limitations and next steps
 
-- Documents are kept in memory, so they are cleared when the server restarts. Persisting the FAISS index to disk is the next step.
+- Documents are kept in memory on the server, so they are cleared when it restarts (conversations are saved in the browser). Persisting the FAISS index to disk is the next step.
 - Scanned PDFs (images without text) need OCR first.

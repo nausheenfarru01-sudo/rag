@@ -29,3 +29,15 @@ def test_documents_and_clear():
     assert store.documents() == {"x.pdf": 2}
     store.clear()
     assert len(store) == 0
+
+
+def test_remove_one_document_keeps_search_working():
+    store = VectorStore(2)
+    store.add(
+        np.stack([_unit([1, 0]), _unit([0, 1]), _unit([1, 1])]),
+        [Chunk("a1", "a.pdf", 1), Chunk("b1", "b.pdf", 1), Chunk("a2", "a.pdf", 2)],
+    )
+    assert store.remove("a.pdf") == 2
+    assert store.documents() == {"b.pdf": 1}
+    assert [r.chunk.text for r in store.search(_unit([1, 0]), top_k=3)] == ["b1"]
+    assert store.remove("missing.pdf") == 0

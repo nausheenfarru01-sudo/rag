@@ -1,349 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAG Research Chatbot</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Inter', sans-serif;
-  height: 100vh;
-  background: radial-gradient(circle at top, #1e1b4b, #020617);
-  color: #fff;
-}
-
-canvas { position: fixed; inset: 0; z-index: 0; }
-
-.app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
-
-header {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 14px 24px;
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.logo {
-  font-family: 'Orbitron', sans-serif;
-  font-size: clamp(20px, 4vw, 32px);
-  letter-spacing: 3px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #a78bfa, #ec4899, #22d3ee);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.status { font-size: 12px; opacity: 0.75; display: flex; align-items: center; gap: 6px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
-.dot.ok { background: #22c55e; }
-.dot.err { background: #ef4444; }
-
-.container { flex: 1; display: flex; gap: 15px; padding: 15px; min-height: 0; }
-
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(25px);
-  border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-}
-
-.sidebar { width: 300px; padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
-
-.upload {
-  border: 2px dashed rgba(255, 255, 255, 0.3);
-  padding: 28px 16px;
-  text-align: center;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.upload:hover, .upload.drag { border-color: #a78bfa; background: rgba(167, 139, 250, 0.08); }
-.upload i { font-size: 24px; margin-bottom: 8px; }
-.upload small { display: block; opacity: 0.6; margin-top: 6px; }
-
-.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
-
-.doc {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.25); border-radius: 10px;
-}
-.doc span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doc small { opacity: 0.6; }
-
-.notice { font-size: 12px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; }
-.notice.error { background: rgba(239, 68, 68, 0.2); }
-
-.chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.chat-box { flex: 1; padding: 20px; overflow-y: auto; }
-
-.empty { margin: auto; text-align: center; opacity: 0.6; padding-top: 15vh; line-height: 1.7; }
-
-.msg { padding: 12px 16px; border-radius: 14px; margin-bottom: 12px; max-width: 75%; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
-.user { background: linear-gradient(135deg, #6366f1, #8b5cf6); margin-left: auto; }
-.bot { background: rgba(255, 255, 255, 0.1); }
-.bot.error { background: rgba(239, 68, 68, 0.25); }
-
-details.sources { margin-top: 10px; font-size: 12px; white-space: normal; }
-details.sources summary { cursor: pointer; opacity: 0.75; }
-.source { margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; }
-.source b { color: #c4b5fd; }
-.source p { margin-top: 4px; opacity: 0.8; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-
-.input-area { display: flex; padding: 15px; gap: 10px; }
-
-input[type=text] {
-  flex: 1; padding: 12px 14px; border: none; border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1); color: #fff; font: inherit;
-}
-input[type=text]:focus { outline: 2px solid #8b5cf6; }
-input[type=text]:disabled { opacity: 0.5; }
-
-button {
-  border: none; padding: 12px 16px; border-radius: 12px;
-  background: linear-gradient(135deg, #ec4899, #6366f1);
-  color: #fff; cursor: pointer; font: inherit;
-  transition: transform 0.15s, opacity 0.15s;
-}
-button:hover:not(:disabled) { transform: scale(1.05); }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
-button.ghost { background: rgba(255, 255, 255, 0.1); }
-
-.typing span {
-  display: inline-block; width: 6px; height: 6px; background: #fff;
-  margin: 2px; border-radius: 50%; animation: bounce 1s infinite;
-}
-.typing span:nth-child(2) { animation-delay: 0.2s; }
-.typing span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
-@media (max-width: 768px) {
-  .container { flex-direction: column; }
-  .sidebar { width: auto; max-height: 40vh; }
-  .msg { max-width: 90%; }
-}
-@media (prefers-reduced-motion: reduce) { canvas { display: none; } }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ResearchMind: chat with your research papers. Answers are grounded in your documents with page-level citations." />
+  <title>ResearchMind · Chat with your papers</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c5cff'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpath d='M10 9h9a4 4 0 0 1 0 8h-4l-5 6V9z' fill='none' stroke='white' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=2" />
 </head>
 <body>
-<canvas id="bg"></canvas>
-
-<div class="app">
-  <header>
-    <div class="logo">RAG CHATBOT</div>
-    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
-    <button class="ghost" id="clearChatBtn" title="Clear conversation"><i class="fa fa-broom"></i> Clear chat</button>
-  </header>
-
-  <div class="container">
-    <aside class="sidebar glass">
-      <label class="upload" id="dropZone">
-        <i class="fa fa-cloud-arrow-up"></i><br>Upload research papers
-        <small>PDF, TXT or MD · drag and drop or click</small>
-        <input type="file" id="fileInput" accept=".pdf,.txt,.md" hidden multiple>
-      </label>
-
-      <div class="notice" id="notice" hidden></div>
-
-      <div class="section-title">Documents</div>
-      <div id="docList"></div>
-      <button class="ghost" id="clearDocsBtn" hidden><i class="fa fa-trash"></i> Remove all documents</button>
-    </aside>
-
-    <main class="chat glass">
-      <div class="chat-box" id="chat">
-        <div class="empty" id="emptyState">
-          <i class="fa fa-book-open fa-2x"></i><br><br>
-          Upload a research paper, then ask questions about it.<br>
-          Answers are based only on your documents, with page references.
+  <div class="shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" aria-label="Conversations and library">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 4h9a5 5 0 0 1 0 10H9l-4 5V4z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <span class="brand-name">ResearchMind</span>
+          <span class="brand-tag">RAG research assistant</span>
         </div>
       </div>
-      <form class="input-area" id="chatForm">
-        <input type="text" id="input" placeholder="Upload a document to start…" autocomplete="off" disabled>
-        <button type="submit" id="sendBtn" disabled aria-label="Send"><i class="fa fa-paper-plane"></i></button>
+
+      <button class="btn primary block" id="newChatBtn"><i data-icon="plus"></i> New chat <kbd>Ctrl K</kbd></button>
+
+      <section class="side-section grow">
+        <div class="side-heading"><span>Conversations</span></div>
+        <div class="search-mini">
+          <i data-icon="search"></i>
+          <input id="chatSearch" placeholder="Search chats" aria-label="Search conversations" />
+        </div>
+        <ul class="chat-list" id="chatList"></ul>
+      </section>
+
+      <section class="side-section">
+        <div class="side-heading">
+          <span>Library</span>
+          <span class="muted" id="libraryCount"></span>
+        </div>
+        <ul class="doc-list" id="docList"></ul>
+        <label class="dropzone" id="dropzone">
+          <i data-icon="upload"></i>
+          <span><b>Upload papers</b><small>PDF, TXT, MD · drop or click</small></span>
+          <input type="file" id="fileInput" accept=".pdf,.txt,.md" multiple hidden />
+        </label>
+        <div class="upload-queue" id="uploadQueue"></div>
+      </section>
+
+      <div class="side-footer">
+        <button class="nav-btn" id="settingsBtn"><i data-icon="settings"></i> Settings</button>
+        <button class="nav-btn" id="helpBtn"><i data-icon="keyboard"></i> Shortcuts <kbd>?</kbd></button>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Main -->
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="menuBtn" aria-label="Open menu"><i data-icon="menu"></i></button>
+        <div class="topbar-title">
+          <h1 id="chatTitle">New chat</h1>
+          <p id="chatSubtitle">Ask anything about your papers</p>
+        </div>
+        <div class="status-pill" id="statusPill" title="Server status">
+          <span class="status-dot"></span><span id="statusText">Connecting…</span>
+        </div>
+        <button class="icon-btn" id="sourcesToggle" aria-label="Toggle sources panel" title="Sources panel"><i data-icon="panel"></i></button>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme"><i data-icon="moon"></i></button>
+      </header>
+
+      <div class="workspace">
+        <main class="chat" id="chat" aria-live="polite"></main>
+
+        <aside class="sources-panel" id="sourcesPanel" aria-label="Sources">
+          <header>
+            <h2><i data-icon="quote"></i> Sources</h2>
+            <button class="icon-btn" id="closeSources" aria-label="Close sources"><i data-icon="x"></i></button>
+          </header>
+          <div id="sourcesBody" class="sources-body"></div>
+        </aside>
+      </div>
+
+      <form class="composer" id="composer">
+        <div class="composer-box">
+          <button type="button" class="icon-btn" id="attachBtn" aria-label="Upload a paper" title="Upload a paper"><i data-icon="paperclip"></i></button>
+          <textarea id="input" rows="1" placeholder="Ask about your papers…" aria-label="Your question"></textarea>
+          <button type="submit" class="send-btn" id="sendBtn" aria-label="Send"><i data-icon="send"></i></button>
+        </div>
+        <div class="composer-hint">
+          <span><kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line</span>
+          <span id="scopeHint"></span>
+        </div>
       </form>
-    </main>
+
+      <footer class="footer">
+        <span id="footerStats"></span>
+        <span class="footer-right">
+          <span class="hide-mobile" id="modelInfo"></span>
+          <a href="https://github.com/nausheenfarru01-sudo/rag" target="_blank" rel="noreferrer"><i data-icon="github"></i> Built by Fareeha Nausheen</a>
+        </span>
+      </footer>
+    </div>
   </div>
-</div>
 
-<script>
-// Served by FastAPI at "/", the API is on the same origin. Opened as a file, fall back to the local server.
-const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+  <div class="drop-overlay" id="dropOverlay"><div><i data-icon="upload"></i><b>Drop papers to add them to your library</b></div></div>
 
-const $ = (id) => document.getElementById(id);
-const chat = $("chat"), input = $("input"), sendBtn = $("sendBtn"), notice = $("notice");
-let busy = false;
-
-async function api(path, options = {}) {
-  const res = await fetch(API + path, options);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Request failed (${res.status})`);
-  return data;
-}
-
-function showNotice(text, isError = false) {
-  notice.hidden = !text;
-  notice.textContent = text;
-  notice.classList.toggle("error", isError);
-}
-
-function setStatus(state, text) {
-  $("statusDot").className = "dot " + state;
-  $("statusText").textContent = text;
-}
-
-/* ---------- Documents ---------- */
-async function refreshDocuments() {
-  const { documents } = await api("/api/documents");
-  const list = $("docList");
-  list.replaceChildren();
-  if (!documents.length) {
-    list.innerHTML = '<div class="notice">No documents yet</div>';
-  }
-  for (const d of documents) {
-    const row = document.createElement("div");
-    row.className = "doc";
-    row.innerHTML = '<i class="fa fa-file-lines"></i><span></span><small></small>';
-    row.querySelector("span").textContent = d.name;
-    row.querySelector("small").textContent = d.chunks + " chunks";
-    list.appendChild(row);
-  }
-  const ready = documents.length > 0;
-  input.disabled = sendBtn.disabled = !ready;
-  input.placeholder = ready ? "Ask about your research…" : "Upload a document to start…";
-  $("clearDocsBtn").hidden = !ready;
-}
-
-async function uploadFiles(fileList) {
-  for (const file of fileList) {
-    showNotice(`Indexing ${file.name}… (the first upload also loads the embedding model)`);
-    const form = new FormData();
-    form.append("file", file);
-    try {
-      const data = await api("/api/upload", { method: "POST", body: form });
-      showNotice(`✅ ${data.document}: ${data.pages} pages, ${data.chunks} chunks indexed`);
-    } catch (err) {
-      showNotice(`❌ ${file.name}: ${err.message}`, true);
-    }
-  }
-  await refreshDocuments();
-}
-
-$("fileInput").addEventListener("change", (e) => { uploadFiles(e.target.files); e.target.value = ""; });
-
-const drop = $("dropZone");
-["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("drag"); }));
-["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("drag"); }));
-drop.addEventListener("drop", (e) => uploadFiles(e.dataTransfer.files));
-
-$("clearDocsBtn").addEventListener("click", async () => {
-  await api("/api/documents", { method: "DELETE" });
-  showNotice("");
-  await refreshDocuments();
-});
-
-/* ---------- Chat ---------- */
-function addMessage(text, type) {
-  $("emptyState")?.remove();
-  const el = document.createElement("div");
-  el.className = "msg " + type;
-  el.textContent = text;
-  chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
-  return el;
-}
-
-function addSources(el, sources) {
-  if (!sources.length) return;
-  const box = document.createElement("details");
-  box.className = "sources";
-  box.innerHTML = `<summary>Sources (${sources.length})</summary>`;
-  sources.forEach((s, i) => {
-    const item = document.createElement("div");
-    item.className = "source";
-    item.innerHTML = "<b></b><p></p>";
-    item.querySelector("b").textContent = `[${i + 1}] ${s.document} · page ${s.page} · match ${Math.round(s.score * 100)}%`;
-    item.querySelector("p").textContent = s.text;
-    box.appendChild(item);
-  });
-  el.appendChild(box);
-}
-
-$("chatForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const query = input.value.trim();
-  if (!query || busy) return;
-
-  busy = true;
-  sendBtn.disabled = true;
-  addMessage(query, "user");
-  input.value = "";
-
-  const typing = addMessage("", "bot typing");
-  typing.innerHTML = "<span></span><span></span><span></span>";
-
-  try {
-    const data = await api("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    typing.remove();
-    addSources(addMessage(data.answer, "bot"), data.sources);
-  } catch (err) {
-    typing.remove();
-    addMessage("⚠️ " + err.message, "bot error");
-  } finally {
-    busy = false;
-    sendBtn.disabled = false;
-    input.focus();
-  }
-});
-
-$("clearChatBtn").addEventListener("click", () => {
-  chat.querySelectorAll(".msg").forEach((m) => m.remove());
-});
-
-/* ---------- Startup ---------- */
-(async () => {
-  try {
-    const health = await api("/api/health");
-    if (health.llm_configured) setStatus("ok", "Connected");
-    else setStatus("err", "GEMINI_API_KEY missing in backend/.env");
-    await refreshDocuments();
-  } catch {
-    setStatus("err", "Backend offline — run: uvicorn main:app");
-  }
-})();
-
-/* ---------- Background particles ---------- */
-const canvas = $("bg"), ctx = canvas.getContext("2d");
-function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
-resize();
-addEventListener("resize", resize);
-
-const particles = Array.from({ length: 90 }, () => ({
-  x: Math.random() * innerWidth, y: Math.random() * innerHeight,
-  r: Math.random() * 2, dx: Math.random() - 0.5, dy: Math.random() - 0.5,
-}));
-
-(function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#8b5cf6";
-  for (const p of particles) {
-    p.x = (p.x + p.dx + canvas.width) % canvas.width;
-    p.y = (p.y + p.dy + canvas.height) % canvas.height;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  requestAnimationFrame(animate);
-})();
-</script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>
