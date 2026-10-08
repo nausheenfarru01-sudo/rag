@@ -1,14 +1,19 @@
-model = None
+"""Sentence embeddings, loaded lazily so the API starts fast."""
+from functools import lru_cache
 
-def get_model():
-    global model
-    if model is None:
-        from sentence_transformers import SentenceTransformer
-        print("🔄 Loading embedding model...")
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        print("✅ Model loaded")
-    return model
+import numpy as np
 
-def embed_text(texts):
-    model = get_model()
-    return model.encode(texts)
+from .config import settings
+
+
+@lru_cache(maxsize=1)
+def _model():
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(settings.embedding_model)
+
+
+def embed(texts: list[str]) -> np.ndarray:
+    """Return L2-normalised float32 embeddings, one row per text."""
+    vectors = _model().encode(texts, batch_size=32, convert_to_numpy=True, normalize_embeddings=True)
+    return np.asarray(vectors, dtype="float32")

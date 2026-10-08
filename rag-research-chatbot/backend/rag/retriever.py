@@ -1,16 +1,11 @@
-def retrieve(query, vector_store, top_k=3):
-    # 🔥 Simple keyword-based retrieval (since no embeddings)
+"""Find the chunks most relevant to a question."""
+from .embedder import embed
+from .vector_store import SearchResult, VectorStore
 
-    results = []
+# Results scoring below this cosine similarity are treated as unrelated to the question.
+MIN_SCORE = 0.15
 
-    query_words = set(query.lower().split())
 
-    for text in vector_store.texts:
-        score = sum(1 for word in query_words if word in text.lower())
-        if score > 0:
-            results.append((score, text))
-
-    # sort by score
-    results.sort(reverse=True, key=lambda x: x[0])
-
-    return [text for _, text in results[:top_k]]
+def retrieve(query: str, store: VectorStore, top_k: int = 4) -> list[SearchResult]:
+    query_vector = embed([query])[0]
+    return [r for r in store.search(query_vector, top_k) if r.score >= MIN_SCORE]
